@@ -1,5 +1,6 @@
 package implementacion.Inventario;
 
+import implementacion.Inventario.modelo.AjusteInventario;
 import implementacion.Inventario.modelo.Producto;
 import implementacion.Inventario.servicio.InventarioService;
 import implementacion.Inventario.servicio.ProductoServicio;
@@ -58,6 +59,21 @@ public class InventarioApplication implements CommandLineRunner {
 
         logger.info(salto);
 
+        List<Producto> alertas = inventarioService.obtenerReporteBajoStock();
+
+        if (!alertas.isEmpty()) {
+            // Usamos System.out para dibujar la tabla bonita
+            logger.info("Inventario por de bajo del minimo, ACCIÓN REQUERIDA " + salto);
+
+            for (Producto p : alertas) {
+                System.out.printf(" Producto: %-15s | Actual: %-3d | Mín: %-3d  \n",
+                        cortarTexto(p.getNombre(), 15),
+                        p.getStockActual(),
+                        p.getStockMinimo());
+            }
+
+        }
+
         logger.info("""
                 
                 ***** Modulo Inventario *****
@@ -66,14 +82,17 @@ public class InventarioApplication implements CommandLineRunner {
                 2.- Modificar Poducto
                 3.- Borrar Poducto
                 4.- Consultar Poducto
-                5.- Listar Poductos
+                5.- Reporte de Inventario
                 6.- Ajuste Inventario
-                7.- Reporte Inventario
+                7.- Reporte Ajuste Inventario
                 0.- Salir 
                 
                 Seleccionar una opcion: """);
 
-        return Integer.parseInt(sc.nextLine());
+        // Validación simple para evitar error si dan enter vacío
+        String entrada = sc.nextLine();
+        if (entrada.isEmpty()) return -1;
+        return Integer.parseInt(entrada);
 
     }
 
@@ -85,9 +104,9 @@ public class InventarioApplication implements CommandLineRunner {
             case 2 -> modificar();
             case 3 -> borrar();
             case 4 -> consultar();
-            case 5 -> listar();
+            case 5 -> reporteInventario();
             case 6 -> ajusteInvetnario();
-            case 7 -> generarReporteStock();
+            case 7 -> reporteAjusteInventario();
             case 0 -> logger.info("Adios.");
 
             default -> throw new IllegalStateException("Valor inesperado: " + opcion);
@@ -148,7 +167,7 @@ public class InventarioApplication implements CommandLineRunner {
 
     public void borrar(){
 
-        logger.info("Borrar Producto: ");
+        logger.info("Borrar Producto: " + salto);
 
         var id = leerId("Borrar");
 
@@ -160,8 +179,7 @@ public class InventarioApplication implements CommandLineRunner {
     }
 
     public void consultar(){
-
-        logger.info("Consultar Producto: " + salto);
+        logger.info("Consultar Producto " + salto);
 
         var id = leerId("Consultar");
 
@@ -169,22 +187,58 @@ public class InventarioApplication implements CommandLineRunner {
 
         if(producto != null){
 
-            logger.info(producto.toString() + salto);
+            logger.info(salto);
+            System.out.printf("%-15s : %-35s %n", "ID", producto.getId());
+            System.out.printf("%-15s : %-35s %n", "Nombre", cortarTexto(producto.getNombre(), 35));
+            System.out.printf("%-15s : %-35s %n", "Categoría", cortarTexto(producto.getCategoria(), 35));
+            System.out.printf("%-15s : %-35s %n", "Ubicación", cortarTexto(producto.getUbicacion(), 35));
 
-        }else{
+            System.out.printf("%-15s : $%-34.2f %n", "Precio", producto.getPrecio());
+            System.out.printf("%-15s : %-35d %n", "Stock Actual", producto.getStockActual());
 
-            logger.info("No existe el producto: " + salto);
+            System.out.printf("%-15s : %-35d %n", "Stock Mínimo", producto.getStockMinimo());
 
+            logger.info(salto);
+
+        } else {
+
+            logger.info("No se encontró ningún producto con el ID: " + id);
+
+            logger.info(salto);
         }
-
     }
 
-    public void listar(){
+    public void reporteInventario() {
+
+        logger.info("Reporte de Inventario:" + salto);
 
         List<Producto> listaProductos = productoServicio.getProductos();
 
-        listaProductos.forEach(producto -> logger.info(producto.toString() + salto));
+        if (listaProductos.isEmpty()) {
 
+            logger.info("El inventario está vacío." + salto);
+            return;
+
+        }
+
+        System.out.println("-------------------------------------------------------------------------------------");
+        System.out.printf("| %-5s | %-20s | %-15s | %-10s | %-8s | %-5s |%n",
+                "ID", "NOMBRE", "CATEGORIA", "PRECIO", "ACTUAL", "MIN");
+        System.out.println("-------------------------------------------------------------------------------------");
+
+        for (Producto p : listaProductos) {
+            System.out.printf("| %-5d | %-20s | %-15s | $%-9.2f | %-8d | %-5d |%n",
+                    p.getId(),
+                    cortarTexto(p.getNombre(), 20),
+                    cortarTexto(p.getCategoria(), 15),
+                    p.getPrecio(),
+                    p.getStockActual(),
+                    p.getStockMinimo()
+            );
+        }
+
+        System.out.println("-------------------------------------------------------------------------------------");
+        logger.info(salto);
     }
 
     public void ajusteInvetnario(){
@@ -213,36 +267,39 @@ public class InventarioApplication implements CommandLineRunner {
 
     }
 
-    private void generarReporteStock() {
+    private void reporteAjusteInventario() {
 
-        logger.info("Reporte Stock Bajo" + salto);
+        logger.info("Historial de Ajustes Inventario" + salto);
 
-        var lista = inventarioService.obtenerReporteBajoStock();
+        List<AjusteInventario> historial = inventarioService.listarTodosLosAjustes();
 
-        if(lista.isEmpty()){
+        if (historial.isEmpty()) {
 
-            logger.info("No hay productos con stock bajo." + salto);
-
-        } else {
-
-            logger.info("ATENCION: Los siguientes productos están por agotarse:" + salto);
-
-            // Formato tabla simple
-            System.out.printf("%-5s %-20s %-10s %-10s%n", "ID", "NOMBRE", "ACTUAL", "MINIMO");
-            System.out.println("-------------------------------------------------------");
-
-            for (Producto p : lista) {
-                System.out.printf("%-5d %-20s %-10d %-10d%n",
-                        p.getId(),
-                        p.getNombre(),
-                        p.getStockActual(),
-                        p.getStockMinimo()
-                );
-            }
-
-            logger.info(salto);
+            logger.info("No se han registrado movimientos en el inventario." + salto);
+            return;
 
         }
+
+        System.out.println("----------------------------------------------------------------------------------------------------");
+        System.out.printf("| %-5s | %-20s | %-10s | %-10s | %-30s |%n",
+                "ID", "PRODUCTO", "CANTIDAD", "STOCK ANT", "MOTIVO");
+        System.out.println("----------------------------------------------------------------------------------------------------");
+
+        for (AjusteInventario a : historial) {
+
+            String signo = a.getCantidadAjustada() > 0 ? "+" : "";
+
+            System.out.printf("| %-5d | %-20s | %-10s | %-10d | %-30s |%n",
+                    a.getId(),
+                    cortarTexto(a.getProducto().getNombre(), 20),
+                    signo + a.getCantidadAjustada(),
+                    a.getStockAlMomento(),
+                    cortarTexto(a.getMotivo(), 30)
+            );
+        }
+
+        System.out.println("----------------------------------------------------------------------------------------------------");
+        logger.info(salto);
     }
 
     public Integer leerId(String operacion){
@@ -253,4 +310,11 @@ public class InventarioApplication implements CommandLineRunner {
     }
 
 
+    private String cortarTexto(String texto, int largo) {
+        if (texto == null) return "N/A";
+        if (texto.length() > largo) {
+            return texto.substring(0, largo);
+        }
+        return texto;
+    }
 }

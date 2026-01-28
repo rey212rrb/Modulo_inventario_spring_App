@@ -88,6 +88,12 @@ public class InventarioService {
 
     }
 
+    public List<AjusteInventario> listarTodosLosAjustes() {
+
+        return ajusteInventarioRepositorio.findAll();
+
+    }
+
     public List<Producto> obtenerReporteBajoStock() {
 
         return productoRepositorio.buscarProductosConBajoStock();
