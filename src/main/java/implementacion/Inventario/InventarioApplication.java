@@ -65,7 +65,7 @@ public class InventarioApplication implements CommandLineRunner {
         List<Producto> alertas = inventarioService.obtenerReporteBajoStock();
 
         if (!alertas.isEmpty()) {
-            // Usamos System.out para dibujar la tabla bonita
+
             logger.info("Inventario por de bajo del minimo, ACCIÓN REQUERIDA " + salto);
 
             for (Producto p : alertas) {
@@ -92,7 +92,7 @@ public class InventarioApplication implements CommandLineRunner {
                 
                 Seleccionar una opcion: """);
 
-        // Validación simple para evitar error si dan enter vacío
+
         String entrada = sc.nextLine();
         if (entrada.isEmpty()) return -1;
         return Integer.parseInt(entrada);
@@ -107,7 +107,7 @@ public class InventarioApplication implements CommandLineRunner {
             case 2 -> modificar();
             case 3 -> borrar();
             case 4 -> consultar();
-            case 5 -> menuReportes(); // Antes era generarReporteStock()
+            case 5 -> menuReportes();
             //case 5 -> reporteInventario();
             case 6 -> ajusteInvetnario();
             case 7 -> reporteAjusteInventario();
