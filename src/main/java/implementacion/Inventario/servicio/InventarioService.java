@@ -131,6 +131,18 @@ public class InventarioService {
 
         }
     }
+
+    public List<AjusteInventario> reportePorCategoria(String categoria) {
+
+        return ajusteInventarioRepositorio.findByProductoCategoria(categoria);
+
+    }
+
+    public List<AjusteInventario> reportePorUbicacion(String ubicacion) {
+
+        return ajusteInventarioRepositorio.findByProductoUbicacion(ubicacion);
+
+    }
 }
 
 

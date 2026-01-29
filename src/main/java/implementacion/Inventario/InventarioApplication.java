@@ -2,8 +2,10 @@ package implementacion.Inventario;
 
 import implementacion.Inventario.modelo.AjusteInventario;
 import implementacion.Inventario.modelo.Producto;
+import implementacion.Inventario.servicio.GeneradorGraficos;
 import implementacion.Inventario.servicio.InventarioService;
 import implementacion.Inventario.servicio.ProductoServicio;
+import implementacion.Inventario.servicio.ReporteServicio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,7 @@ public class InventarioApplication implements CommandLineRunner {
     private static final Logger logger = LoggerFactory.getLogger(InventarioApplication.class);
     private String salto = System.lineSeparator();
     private Scanner sc = new Scanner(System.in);
+    private ReporteServicio reporteServicio = new ReporteServicio();
 
     @Autowired
     private InventarioService inventarioService;
@@ -82,7 +85,7 @@ public class InventarioApplication implements CommandLineRunner {
                 2.- Modificar Poducto
                 3.- Borrar Poducto
                 4.- Consultar Poducto
-                5.- Reporte de Inventario
+                5.- Descargar reporte de Inventario
                 6.- Ajuste Inventario
                 7.- Reporte Ajuste Inventario
                 0.- Salir 
@@ -104,7 +107,8 @@ public class InventarioApplication implements CommandLineRunner {
             case 2 -> modificar();
             case 3 -> borrar();
             case 4 -> consultar();
-            case 5 -> reporteInventario();
+            case 5 -> menuReportes(); // Antes era generarReporteStock()
+            //case 5 -> reporteInventario();
             case 6 -> ajusteInvetnario();
             case 7 -> reporteAjusteInventario();
             case 0 -> logger.info("Adios.");
@@ -202,7 +206,7 @@ public class InventarioApplication implements CommandLineRunner {
 
         } else {
 
-            logger.info("No se encontró ningún producto con el ID: " + id);
+            logger.info("No se encontro ningun producto con el ID: " + id);
 
             logger.info(salto);
         }
@@ -216,7 +220,7 @@ public class InventarioApplication implements CommandLineRunner {
 
         if (listaProductos.isEmpty()) {
 
-            logger.info("El inventario está vacío." + salto);
+            logger.info("El inventario esta vacío." + salto);
             return;
 
         }
@@ -304,17 +308,93 @@ public class InventarioApplication implements CommandLineRunner {
 
     public Integer leerId(String operacion){
 
-        logger.info("Ingrese el ID del producto " + operacion + " : " + salto);
+        logger.info("Ingrese el ID del producto a " + operacion + ": ");
         return Integer.parseInt(sc.nextLine());
 
     }
 
 
     private String cortarTexto(String texto, int largo) {
+
         if (texto == null) return "N/A";
         if (texto.length() > largo) {
+
             return texto.substring(0, largo);
+
         }
+
         return texto;
+    }
+
+    private void menuReportes() {
+
+        logger.info("Descargar Reporte" + salto);
+        logger.info("1. Filtrar por Categoría" + salto);
+        logger.info("2. Filtrar por Ubicación" +  salto);
+        logger.info("3. Ver Todo el Historial" +  salto);
+        logger.info("0. Salir" +  salto);
+        logger.info("Selecciona una opción: ");
+
+        int opcion = Integer.parseInt(sc.nextLine());
+        List<AjusteInventario> resultados = null;
+        String tituloReporte = "";
+
+        switch (opcion) {
+
+            case 1 -> {
+
+                logger.info("Ingresa la categoria a buscar: ");
+                String categoria = sc.nextLine();
+                resultados = inventarioService.reportePorCategoria(categoria);
+                tituloReporte = "Reporte de Categoría: " + categoria;
+
+            }
+            case 2 -> {
+
+                logger.info("Ingresa la ubicacion a buscar: (Norte, Sur, Este o Oeste)");
+                String ubi = sc.nextLine();
+                resultados = inventarioService.reportePorUbicacion(ubi);
+                tituloReporte = "Reporte de Ubicación: " + ubi;
+
+            }
+            case 3 -> {
+
+                resultados = inventarioService.listarTodosLosAjustes();
+                tituloReporte = "Reporte total de Inventario";
+
+            }
+
+            case 0 -> { return; }
+
+            default -> logger.info("Opcion invalida.");
+
+        }
+
+        if (resultados == null || resultados.isEmpty()) {
+
+            logger.info("No se encontraron datos para ese filtro." + salto);
+            return;
+
+        }
+
+        GeneradorGraficos.mostrarGraficoBarras(resultados, tituloReporte);
+
+        logger.info("¿Deseas exportar estos datos?" + salto);
+        logger.info("1. Generar PDF" + salto);
+        logger.info("2. Generar Excel" + salto);
+        logger.info("0. No, gracias" + salto);
+
+        int exportar = Integer.parseInt(sc.nextLine());
+
+        switch (exportar) {
+
+            case 1 -> reporteServicio.exportarPDF(resultados, tituloReporte);
+            case 2 -> reporteServicio.exportarExcel(resultados, tituloReporte);
+            case 0 -> logger.info("Salir");
+            default -> logger.info("Opción no valida.");
+
+        }
+
+        logger.info(salto);
     }
 }
